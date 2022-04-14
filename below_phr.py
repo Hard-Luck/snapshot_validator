@@ -5,7 +5,9 @@ import csv
 
 air_drop_balances = {}
 # Open entire file and format into desired dict
-with open("Phore Snapshots - Graphene Airdrops - Snapshots - All.csv") as snapshot_file:
+with open(
+    "./static/Phore Snapshots - Graphene Airdrops - Snapshots - All.csv"
+) as snapshot_file:
     balances = csv.DictReader(snapshot_file)
     for row in balances:
         air_drop_balances[row["PHR Address"]] = [
@@ -36,8 +38,7 @@ for wallet, values in air_drop_balances.items():
         relevant[wallet] = values
 
 # Write CSV file to disk
-with open("min_1000.csv", "w") as f:
+with open("./static/min_1000(1).csv", "w") as f:
     for key in relevant.keys():
-        f.write(f"{key}, {relevant[key]}\n")
-
-        """Needs to be changes to better csv formatting"""
+        value = relevant[key]
+        f.write(f"{key}," + ", ".join(str(x) for x in value) + "\n")

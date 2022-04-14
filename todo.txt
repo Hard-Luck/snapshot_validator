@@ -1,21 +1,9 @@
-write assertions
-
-open min1000 cs5 into an {address: balances} dict
-open balance check into an {address: balances} dict
-
-for key, value in min 1000
-	if balancecheck[key] == value:
-		log key: Correct 
-	else:
-		log error difference is abs value - balance check key
-
-
-Figure out the 0 error
-
-reformat the min_1000.csv precessor 
-
 check the assertions and create a logging mechanism
 
 download remaining csvs
 
 figure out a protocol for writing tests
+
+log error difference is abs value - balance check key
+
+Create function for checking if most recent block had multiple inputs/outputs

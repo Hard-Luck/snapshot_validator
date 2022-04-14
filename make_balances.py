@@ -27,8 +27,14 @@ def format_csv(file: str) -> pd.DataFrame:
 def insert_blocks(block: str, dataframe: pd.DataFrame) -> pd.DataFrame:
     """Insert snapshot blocks into df with 0 values as a reference point"""
 
-    pd.DataFrame([[block, 0, 0]], columns=["Block", "Data/Time", "Total"])
-    dataframe.loc[len(dataframe.index)] = [block, 0, 0]
+    # Check that block doesn't already exist in df
+    if (dataframe["Block"] != block).any():
+        pd.DataFrame([[block, 0, 0]], columns=["Block", "Data/Time", "Total"])
+        # insert proxy values
+        dataframe.loc[len(dataframe.index)] = [block, 0, "Test_Block"]
+
+    else:
+        print("block exists")
     return dataframe
 
 
@@ -40,24 +46,31 @@ def get_index(blocks: list[str], dataframe: pd.DataFrame) -> list[int]:
     return indices
 
 
-def get_balances(order: list[int], dataframe: pd.DataFrame) -> list:
+def get_balances(block_heights: list[int], dataframe: pd.DataFrame) -> list:
     """Check the transaction before the index to see what the balance was"""
-    balances = []
-    num_rows = dataframe.shape[0]
-    for index, block in enumerate(order):
-        if block == num_rows - 1:
-            balances.append(0)
+    # Initialise empty list for snapshot balance
+    snapshot_balances = []
+    balance_index = [x - 1 for x in block_heights]
+    rows = dataframe.shape[0]
+    # Ensure if dummy value is first "transaction" snapshot value is 0
+    while rows in balance_index:
+        snapshot_balances.append(0)
+
+    # Append the balance immediately before the snapshot
+    value = list(dataframe["Total"].iloc[balance_index])
+    snapshot_balances = snapshot_balances + value
+    return snapshot_balances
+
+
+def fix_dummy(balances: list) -> list[float]:
+    """Fix the dummy values picked up by making them equal to most recent real value
+    or zero if dummy transaction is first recoded"""
+    for index, balance in enumerate(balances):
+        if index == 0 and balance == "Test_Block":
+            balances[index] = 0
             continue
-        try:
-            value = dataframe["Total"].loc[(block + 1)]
-            if block < len(order):
-                balances += [value] * (len(order) - index)
-                break
-            # Check if rest of snapshots were missed
-            balances.append(value)
-        except KeyError:
-            balances.append("NaN")
-            print(f"Error at {block}")
+        elif balance == "Test_Block":
+            balances[index] = balances[index - 1]
     return balances
 
 
@@ -73,10 +86,11 @@ def main():
         df["Block"] = df["Block"].apply(pd.to_numeric)
 
         # Sort the dataframe by blocks
-        df = df.sort_values("Block", axis=0, ignore_index=True, ascending=False)
-        indices = get_index(snapshots, df)
+        df = df.sort_values("Block", ignore_index=True, ascending=True)
 
-        balances = get_balances(indices, df)
+        block_height = get_index(snapshots, df)
+        balances = get_balances(block_height, df)
+        balances = fix_dummy(balances)
 
         with open("balances_check.csv", "a") as fd:
             fd.write(f"{address}, " + ", ".join(str(x) for x in balances) + "\n")
